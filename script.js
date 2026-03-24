@@ -88,17 +88,50 @@ function renderShortcutButtons() {
   scrollDown();
 }
 
+const WORKER_URL = 'https://ashley-portfolio-api.ashleydbeverly.workers.dev';
+
+async function fetchWeatherGreeting() {
+  try {
+    const loc = await fetch('https://ipapi.co/json/').then(r => r.json());
+    const { city, region, latitude: lat, longitude: lon } = loc;
+    const res = await fetch(`${WORKER_URL}/weather-greeting`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lat, lon, city, region }),
+    });
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
 async function bootSequence() {
   await sleep(200);
-  await typewriterLn('initializing ashleydbeverly.dev...', '#8b949e');
+  ln('initializing ashleydbeverly.dev...', '#8b949e');
   await sleep(200);
-  await typewriterLn('loading system...', '#8b949e');
+  ln('loading system...', '#8b949e');
+
+  const weatherPromise = fetchWeatherGreeting();
+
   await sleep(400);
   blank();
-  await typewriterLn('system ready.', '#56d364');
+  ln('system ready.', '#56d364');
   await sleep(300);
   blank();
-  await typewriterLn('> type a command or choose below:', '#8b949e');
+
+  const weather = await weatherPromise;
+  if (weather && !weather.error) {
+    ln(`> detecting visitor location...`, '#8b949e');
+    await sleep(150);
+    ln(`> location: ${weather.city}, ${weather.region}`, '#8b949e');
+    await sleep(150);
+    ln(`> current conditions: ${weather.temp}°F, ${weather.conditions}`, '#8b949e');
+    await sleep(150);
+    await typewriterLn(`> ${weather.greeting}`, '#c9d1d9');
+    blank();
+  }
+
+  ln('> type a command or choose below:', '#8b949e');
   blank();
   renderShortcutButtons();
   blank();
