@@ -16,8 +16,14 @@ function sleep(ms) {
   return new Promise(r => setTimeout(r, ms));
 }
 
+const terminalBody = document.getElementById('terminal-body');
+
 function scrollDown() {
-  window.scrollTo(0, document.body.scrollHeight);
+  if (isMobile) {
+    terminalBody.scrollTop = terminalBody.scrollHeight;
+  } else {
+    window.scrollTo(0, document.body.scrollHeight);
+  }
 }
 
 function ln(html = '', color = '') {
