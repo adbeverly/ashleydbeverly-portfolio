@@ -7,6 +7,9 @@ const cmdInput  = document.getElementById('cmd-input');
 
 inputLine.style.visibility = 'hidden';
 
+const isMobile = window.matchMedia('(pointer: coarse)').matches;
+if (isMobile) inputLine.style.display = 'none';
+
 // ── Utilities ──
 
 function sleep(ms) {
@@ -341,7 +344,7 @@ cmdInput.addEventListener('keydown', async (e) => {
 });
 
 document.getElementById('terminal-body').addEventListener('click', () => {
-  cmdInput.focus();
+  if (!isMobile) cmdInput.focus();
 });
 
 // ── Shortcut buttons ──
@@ -358,7 +361,7 @@ function setActiveBtn(cmd) {
 
 async function typeAndRun(command) {
   setShortcutsEnabled(false);
-  cmdInput.focus();
+  if (!isMobile) cmdInput.focus();
 
   for (const char of command) {
     cmdInput.value += char;
