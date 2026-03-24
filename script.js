@@ -40,24 +40,66 @@ function esc(str) {
 
 // ── Boot sequence ──
 
+async function typewriterLn(text, color = '', charDelay = 32) {
+  const el = document.createElement('span');
+  el.className = 'ln';
+  if (color) el.style.color = color;
+  output.appendChild(el);
+  scrollDown();
+  for (const char of text) {
+    el.textContent += char;
+    scrollDown();
+    await sleep(charDelay);
+  }
+}
+
+const SC_DEFS = [
+  { label: 'whoami',             cmd: 'whoami' },
+  { label: 'cat career.log',     cmd: 'cat career.log' },
+  { label: './impact --numbers', cmd: './impact --numbers' },
+  { label: 'ls skills/',         cmd: 'ls skills/' },
+  { label: 'cat about.txt',      cmd: 'cat about.txt' },
+  { label: 'code .',             cmd: 'code .' },
+  { label: 'ask me anything',    cmd: 'ask me anything' },
+];
+
+function renderShortcutButtons() {
+  const row = document.createElement('div');
+  row.className = 'sc-row';
+  SC_DEFS.forEach(({ label, cmd }) => {
+    const btn = document.createElement('button');
+    btn.className = 'sc';
+    if (cmd === 'ask me anything') btn.classList.add('sc-ask');
+    btn.dataset.cmd = cmd;
+    btn.textContent = label;
+    btn.addEventListener('click', () => shortcutClick(cmd));
+    row.appendChild(btn);
+  });
+  output.appendChild(row);
+  scrollDown();
+}
+
 async function bootSequence() {
-  await sleep(300);
-  ln('initializing ashleydbeverly.dev...', '#8b949e');
+  await sleep(200);
+  await typewriterLn('initializing ashleydbeverly.dev...', '#8b949e');
+  await sleep(200);
+  await typewriterLn('loading system...', '#8b949e');
   await sleep(400);
-  ln('loading system...', '#8b949e');
-  await sleep(600);
   blank();
-  ln('system ready.', '#56d364');
-  await sleep(250);
+  await typewriterLn('system ready.', '#56d364');
+  await sleep(300);
   blank();
-  ln('> type <span style="color:#e3b341">help</span> to see available commands', '#8b949e');
+  await typewriterLn('> type a command or choose below:', '#8b949e');
+  blank();
+  renderShortcutButtons();
   blank();
 }
 
 async function boot() {
   await bootSequence();
   inputLine.style.visibility = 'visible';
-  cmdInput.focus();
+  setActiveBtn('whoami');
+  await typeAndRun('whoami');
 }
 
 // ── Commands ──
@@ -161,6 +203,7 @@ async function helpCmd() {
 
   const cmds = [
     { cmd: 'whoami',              desc: 'name, title, location, contact' },
+    { cmd: 'code .',              desc: 'open github' },
     { cmd: 'cat career.log',      desc: 'career timeline' },
     { cmd: './impact --numbers',  desc: 'impact metrics' },
     { cmd: 'ls skills/',          desc: 'full tech stack' },
@@ -182,6 +225,8 @@ async function helpCmd() {
 async function clearCmd() {
   output.innerHTML = '';
   await bootSequence();
+  setActiveBtn('whoami');
+  await typeAndRun('whoami');
 }
 
 async function privacyCmd() {
@@ -193,6 +238,23 @@ async function privacyCmd() {
   blank();
 }
 
+async function codeCmd() {
+  blank();
+  ln('<span style="color:#8b949e">opening repository...</span>');
+  await sleep(400);
+  ln('<a href="https://github.com/adbeverly" target="_blank" rel="noopener">github.com/adbeverly</a>');
+  blank();
+  window.open('https://github.com/adbeverly', '_blank', 'noopener');
+}
+
+async function askPlaceholder() {
+  blank();
+  ln('<span style="color:#f778ba">ask my resume</span> <span style="color:#8b949e">— coming soon</span>');
+  await sleep(80);
+  ln('<span style="color:#8b949e">// drop back in once the next feature ships</span>');
+  blank();
+}
+
 // ── Command map ──
 
 const CMD_MAP = {
@@ -201,9 +263,11 @@ const CMD_MAP = {
   './impact --numbers': impact,
   'ls skills/':         lsSkills,
   'cat about.txt':      catAbout,
+  'code .':             codeCmd,
   'help':               helpCmd,
   'clear':              clearCmd,
   'privacy':            privacyCmd,
+  'ask me anything':    askPlaceholder,
 };
 
 // ── Input handling ──
@@ -279,5 +343,45 @@ cmdInput.addEventListener('keydown', async (e) => {
 document.getElementById('terminal-body').addEventListener('click', () => {
   cmdInput.focus();
 });
+
+// ── Shortcut buttons ──
+
+function setShortcutsEnabled(enabled) {
+  document.querySelectorAll('.sc').forEach(b => b.disabled = !enabled);
+}
+
+function setActiveBtn(cmd) {
+  document.querySelectorAll('.sc').forEach(b => {
+    b.classList.toggle('sc-active', b.dataset.cmd === cmd);
+  });
+}
+
+async function typeAndRun(command) {
+  setShortcutsEnabled(false);
+  cmdInput.focus();
+
+  for (const char of command) {
+    cmdInput.value += char;
+    dispText.textContent = cmdInput.value;
+    await sleep(48);
+  }
+
+  await sleep(180);
+
+  cmdInput.value = '';
+  dispText.textContent = '';
+  await runCommand(command);
+
+  setShortcutsEnabled(true);
+}
+
+async function shortcutClick(cmd) {
+  setShortcutsEnabled(false);
+  output.innerHTML = '';
+  renderShortcutButtons();
+  setActiveBtn(cmd);
+  blank();
+  await typeAndRun(cmd);
+}
 
 boot();
