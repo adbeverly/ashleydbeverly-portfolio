@@ -142,6 +142,7 @@ const SC_DEFS = [
 function renderShortcutButtons() {
   const row = document.createElement('div');
   row.className = 'sc-row';
+  row.id = 'main-sc-row';
   SC_DEFS.forEach(({ label, cmd }) => {
     const btn = document.createElement('button');
     btn.className = 'sc';
@@ -478,6 +479,97 @@ async function resumeCmd() {
   chatMode = true;
 }
 
+// ── Admin easter egg ──
+
+const auth = firebase.auth();
+let adminMode = false;
+let adminAuthenticated = false;
+
+async function currentStatusLog() {
+  blank();
+  try {
+    const doc = await db.collection('current_status').doc('status').get();
+    if (doc.exists) {
+      const d = doc.data();
+      const time = d.updatedAt ? timeAgo(d.updatedAt.toDate()) : '';
+      ln(`<span style="color:#e3b341">${esc(d.text)}</span>`);
+      if (time) ln(`<span style="color:#8b949e">// last updated: ${time}</span>`);
+    } else {
+      ln('<span style="color:#8b949e">// no status set</span>');
+    }
+  } catch {
+    ln('<span style="color:#8b949e">// could not load status</span>');
+  }
+  blank();
+}
+
+async function adminCmd() {
+  blank();
+  if (adminAuthenticated) {
+    await showAdminPanel();
+    return;
+  }
+  ln('<span style="color:#8b949e">// enter password:</span>');
+  blank();
+  adminMode = 'password';
+  if (isMobile) { inputLine.style.display = 'flex'; cmdInput.focus(); }
+}
+
+async function attemptAdminLogin(password) {
+  adminMode = false;
+  ln('<span style="color:#58a6ff">&gt;</span> <span style="color:#c9d1d9">••••••••</span>');
+  blank();
+  ln('<span style="color:#8b949e">// authenticating...</span>');
+  try {
+    await auth.signInWithEmailAndPassword('AshleyDBeverly@gmail.com', password);
+    adminAuthenticated = true;
+    output.lastElementChild.remove();
+    ln('<span style="color:#56d364">// access granted. welcome back.</span>');
+    blank();
+    await showAdminPanel();
+  } catch {
+    output.lastElementChild.remove();
+    ln('<span style="color:#f778ba">// access denied.</span>');
+    blank();
+    if (isMobile) inputLine.style.display = 'none';
+  }
+}
+
+async function showAdminPanel() {
+  try {
+    const doc = await db.collection('current_status').doc('status').get();
+    const current = doc.exists ? doc.data().text : '';
+    ln('<span style="color:#8b949e">// current status:</span>');
+    ln(`<span style="color:#e3b341">${esc(current)}</span>`);
+    blank();
+    ln('<span style="color:#8b949e">// type new status and press enter, or type <span style="color:#e3b341">exit</span> to close:</span>');
+    blank();
+  } catch {
+    ln('<span style="color:#8b949e">// could not load current status</span>');
+    blank();
+  }
+  adminMode = 'update';
+  if (isMobile) { inputLine.style.display = 'flex'; cmdInput.focus(); }
+}
+
+async function updateStatus(text) {
+  adminMode = false;
+  ln('<span style="color:#58a6ff">&gt;</span> <span style="color:#c9d1d9">' + esc(text) + '</span>');
+  blank();
+  try {
+    await db.collection('current_status').doc('status').set({
+      text,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+    ln('<span style="color:#56d364">// status updated.</span>');
+  } catch {
+    ln('<span style="color:#f778ba">// update failed. try again.</span>');
+    adminMode = 'update';
+  }
+  blank();
+  if (isMobile) inputLine.style.display = 'none';
+}
+
 // ── Command map ──
 
 const CMD_MAP = {
@@ -488,6 +580,8 @@ const CMD_MAP = {
   'cat about.txt':      catAbout,
   'cat fun_facts.txt':  catFunFacts,
   'visitors.log':       visitorsLog,
+  'current_status.log': currentStatusLog,
+  'admin':              adminCmd,
   'code .':             codeCmd,
   'help':               helpCmd,
   'clear':              clearCmd,
@@ -554,7 +648,9 @@ async function runCommand(raw) {
 }
 
 cmdInput.addEventListener('input', () => {
-  dispText.textContent = cmdInput.value;
+  dispText.textContent = adminMode === 'password'
+    ? '•'.repeat(cmdInput.value.length)
+    : cmdInput.value;
 });
 
 cmdInput.addEventListener('keydown', async (e) => {
@@ -562,7 +658,21 @@ cmdInput.addEventListener('keydown', async (e) => {
     const val = cmdInput.value;
     cmdInput.value = '';
     dispText.textContent = '';
-    await runCommand(val);
+    if (adminMode === 'password') {
+      await attemptAdminLogin(val);
+    } else if (adminMode === 'update') {
+      if (val.trim().toLowerCase() === 'exit') {
+        adminMode = false;
+        if (isMobile) inputLine.style.display = 'none';
+        blank();
+        ln('<span style="color:#8b949e">// admin panel closed.</span>');
+        blank();
+      } else if (val.trim()) {
+        await updateStatus(val.trim());
+      }
+    } else {
+      await runCommand(val);
+    }
   } else if (e.key === 'ArrowUp') {
     e.preventDefault();
     if (histIdx < cmdHistory.length - 1) {
