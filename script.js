@@ -63,13 +63,14 @@ async function typewriterLn(text, color = '', charDelay = 32) {
 }
 
 const SC_DEFS = [
-  { label: 'whoami',             cmd: 'whoami' },
+  { label: './ashley',           cmd: './ashley' },
+  { label: './resume',           cmd: './resume' },
   { label: 'cat career.log',     cmd: 'cat career.log' },
   { label: './impact --numbers', cmd: './impact --numbers' },
   { label: 'ls skills/',         cmd: 'ls skills/' },
   { label: 'cat about.txt',      cmd: 'cat about.txt' },
+  { label: 'visitors.log',       cmd: 'visitors.log' },
   { label: 'code .',             cmd: 'code .' },
-  { label: 'ask me anything',    cmd: 'ask me anything' },
 ];
 
 function renderShortcutButtons() {
@@ -140,8 +141,8 @@ async function bootSequence() {
 async function boot() {
   await bootSequence();
   inputLine.style.visibility = 'visible';
-  setActiveBtn('whoami');
-  await typeAndRun('whoami');
+  setActiveBtn('./ashley');
+  await typeAndRun('./ashley');
 }
 
 // ── Commands ──
@@ -195,6 +196,7 @@ async function impact() {
     { num: '90%',             desc: 'system success rate in production' },
     { num: '69%',             desc: 'of app migrations led (18 of 26)' },
     { num: '50K+',            desc: 'monthly interactions on shipped tools' },
+    { num: '41',              desc: 'generative playbooks built and maintained' },
   ];
 
   for (const r of rows) {
@@ -236,6 +238,48 @@ async function catAbout() {
     await sleep(50);
   }
   blank();
+
+  const row = document.createElement('span');
+  row.className = 'ln';
+  const btn = document.createElement('button');
+  btn.className = 'sc';
+  btn.textContent = 'cat fun_facts.txt';
+  btn.addEventListener('click', async () => {
+    btn.remove();
+    ln('<span style="color:#58a6ff">&gt;</span> <span style="color:#c9d1d9">cat fun_facts.txt</span>');
+    await catFunFacts();
+  });
+  row.appendChild(btn);
+  output.appendChild(row);
+  blank();
+}
+
+async function catFunFacts() {
+  blank();
+  const facts = [
+    'I first taught myself to code around 2008 to build a fansite for a now famous rapper who was',
+    'not famous yet. She later hired me as her official web admin. I was doing this years',
+    'before I ever considered a career in tech.',
+    '',
+    'My favorite movie and book is The Neverending Story. I wear a custom Auryn necklace',
+    'every single day. No notes.',
+    '',
+    'My favorite food is spaghetti. Not sorry about it.',
+    '',
+    'Detroit born and raised but I split my time in Sacramento now, which helps with the',
+    'sunshine situation significantly.',
+    '',
+    'I have 10 nieces and nephews from only 2 siblings. My siblings are overachievers.',
+    '',
+    'In my free time I am illustrating a children\'s book and developing a web comic.',
+    'Turns out building characters and building software have more in common than you',
+    'would think.',
+  ];
+  for (const l of facts) {
+    ln(l);
+    await sleep(40);
+  }
+  blank();
 }
 
 async function helpCmd() {
@@ -244,7 +288,7 @@ async function helpCmd() {
   blank();
 
   const cmds = [
-    { cmd: 'whoami',              desc: 'name, title, location, contact' },
+    { cmd: './ashley',             desc: 'name, title, location, contact' },
     { cmd: 'code .',              desc: 'open github' },
     { cmd: 'cat career.log',      desc: 'career timeline' },
     { cmd: './impact --numbers',  desc: 'impact metrics' },
@@ -265,10 +309,11 @@ async function helpCmd() {
 }
 
 async function clearCmd() {
+  chatMode = false;
   output.innerHTML = '';
   await bootSequence();
-  setActiveBtn('whoami');
-  await typeAndRun('whoami');
+  setActiveBtn('./ashley');
+  await typeAndRun('./ashley');
 }
 
 async function privacyCmd() {
@@ -289,27 +334,69 @@ async function codeCmd() {
   window.open('https://github.com/adbeverly', '_blank', 'noopener');
 }
 
-async function askPlaceholder() {
+let chatMode = false;
+
+async function sendToAI(question) {
+  try {
+    const res = await fetch(`${WORKER_URL}/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question }),
+    });
+    const data = await res.json();
+    return data.response || 'something went wrong. try again.';
+  } catch {
+    return 'could not reach the server. try again later.';
+  }
+}
+
+async function resumeCmd() {
   blank();
-  ln('<span style="color:#f778ba">ask my resume</span> <span style="color:#8b949e">— coming soon</span>');
-  await sleep(80);
-  ln('<span style="color:#8b949e">// drop back in once the next feature ships</span>');
+
+  const row = document.createElement('span');
+  row.className = 'ln';
+  const dlBtn = document.createElement('a');
+  dlBtn.className = 'sc';
+  dlBtn.href = 'assets/ashley-beverly-resume.pdf';
+  dlBtn.download = 'ashley-beverly-resume.pdf';
+  dlBtn.textContent = 'resume.pdf';
+  row.appendChild(dlBtn);
+  output.appendChild(row);
   blank();
+
+  ln('<span style="color:#8b949e">ask me anything — I\'ll answer as myself.</span>');
+  blank();
+  ln('<span style="color:#8b949e">try:</span>');
+  const prompts = [
+    'how did you get into coding?',
+    'what awards have you won?',
+    'what are you looking for?',
+    'what makes you different?',
+  ];
+  for (const p of prompts) {
+    ln(`<span style="color:#8b949e">  &gt; ${p}</span>`);
+  }
+  blank();
+  ln('<span style="color:#8b949e">type <span style="color:#e3b341">exit</span> to leave.</span>');
+  blank();
+
+  chatMode = true;
 }
 
 // ── Command map ──
 
 const CMD_MAP = {
-  'whoami':             whoami,
+  './ashley':           whoami,
   'cat career.log':     careerLog,
   './impact --numbers': impact,
   'ls skills/':         lsSkills,
   'cat about.txt':      catAbout,
+  'cat fun_facts.txt':  catFunFacts,
   'code .':             codeCmd,
   'help':               helpCmd,
   'clear':              clearCmd,
   'privacy':            privacyCmd,
-  'ask me anything':    askPlaceholder,
+  './resume':           resumeCmd,
 };
 
 // ── Input handling ──
@@ -334,6 +421,24 @@ async function runCommand(raw) {
 
   if (key === 'clear') {
     clearCmd();
+    return;
+  }
+
+  if (key === 'exit' && chatMode) {
+    chatMode = false;
+    blank();
+    ln('<span style="color:#8b949e">// back to normal mode</span>');
+    blank();
+    return;
+  }
+
+  if (chatMode) {
+    blank();
+    ln('<span style="color:#8b949e">// thinking...</span>');
+    const reply = await sendToAI(trimmed);
+    output.lastElementChild.remove();
+    await typewriterLn(reply, '#c9d1d9', 18);
+    blank();
     return;
   }
 
