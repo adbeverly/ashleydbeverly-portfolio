@@ -215,6 +215,18 @@ a:hover {
   pointer-events: none;
 }
 
+/* ── Footer ── */
+
+#site-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 20px 0 28px;
+  color: #3d444d;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
 /* ── Scrollbar ── */
 
 ::-webkit-scrollbar       { width: 5px; }
@@ -260,5 +272,17 @@ a:hover {
 
   #cmd-input {
     font-size: 13px;
+  }
+
+  .sc-row {
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    padding: 6px 0;
+    z-index: 10;
+  }
+
+  #site-footer {
+    display: none;
   }
 }
