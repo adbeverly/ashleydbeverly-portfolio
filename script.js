@@ -1,5 +1,71 @@
 'use strict';
 
+// ── Firebase ──
+
+firebase.initializeApp({
+  apiKey:            'AIzaSyCpE_BohCijxMRCR-UkaV231uDpxLduoZM',
+  authDomain:        'ashleydbeverly-portfolio.firebaseapp.com',
+  projectId:         'ashleydbeverly-portfolio',
+  storageBucket:     'ashleydbeverly-portfolio.firebasestorage.app',
+  messagingSenderId: '94666924497',
+  appId:             '1:94666924497:web:c07e1279228b4b49b1c0f0',
+});
+
+const db = firebase.firestore();
+
+async function logVisit(weather) {
+  try {
+    await db.collection('visitors').add({
+      city:       weather.city,
+      region:     weather.region,
+      country:    weather.country || '',
+      temp:       weather.temp,
+      conditions: weather.conditions,
+      timestamp:  firebase.firestore.FieldValue.serverTimestamp(),
+    });
+  } catch { /* silently fail */ }
+}
+
+function timeAgo(date) {
+  const s = Math.floor((new Date() - date) / 1000);
+  if (s < 60)                       return 'just now';
+  if (s < 3600)                     return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400)                    return `${Math.floor(s / 3600)}h ago`;
+  return `${Math.floor(s / 86400)}d ago`;
+}
+
+async function visitorsLog() {
+  blank();
+  ln('<span style="color:#8b949e">&gt; loading visitor log...</span>');
+  try {
+    const snap = await db.collection('visitors')
+      .orderBy('timestamp', 'desc')
+      .limit(10)
+      .get();
+    output.lastElementChild.remove();
+    blank();
+    if (snap.empty) {
+      ln('<span style="color:#8b949e">// no visitors logged yet</span>');
+    } else {
+      snap.forEach(doc => {
+        const d = doc.data();
+        const loc = d.country && d.country !== 'United States'
+          ? `${d.city}, ${d.country}`
+          : `${d.city}, ${d.region}`;
+        const time = d.timestamp ? timeAgo(d.timestamp.toDate()) : 'recently';
+        ln(
+          `  <span style="color:#c9d1d9;display:inline-block;min-width:22ch">${loc}</span>` +
+          `<span style="color:#56d364;display:inline-block;min-width:18ch">${d.temp}°F, ${d.conditions}</span>` +
+          `<span style="color:#8b949e">${time}</span>`
+        );
+      });
+    }
+  } catch {
+    ln('<span style="color:#8b949e">// could not load visitor log</span>');
+  }
+  blank();
+}
+
 const output    = document.getElementById('output');
 const inputLine = document.getElementById('input-line');
 const dispText  = document.getElementById('display-text');
@@ -93,12 +159,9 @@ const WORKER_URL = 'https://ashley-portfolio-api.ashleydbeverly.workers.dev';
 
 async function fetchWeatherGreeting() {
   try {
-    const loc = await fetch('https://ipapi.co/json/').then(r => r.json());
-    const { city, region, latitude: lat, longitude: lon } = loc;
     const res = await fetch(`${WORKER_URL}/weather-greeting`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ lat, lon, city, region }),
     });
     return await res.json();
   } catch {
@@ -130,6 +193,7 @@ async function bootSequence() {
     await sleep(150);
     await typewriterLn(`> ${weather.greeting}`, '#c9d1d9');
     blank();
+    logVisit(weather);
   }
 
   ln('> type a command or choose below:', '#8b949e');
@@ -423,6 +487,7 @@ const CMD_MAP = {
   'ls skills/':         lsSkills,
   'cat about.txt':      catAbout,
   'cat fun_facts.txt':  catFunFacts,
+  'visitors.log':       visitorsLog,
   'code .':             codeCmd,
   'help':               helpCmd,
   'clear':              clearCmd,
