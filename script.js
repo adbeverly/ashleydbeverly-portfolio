@@ -446,8 +446,8 @@ async function resumeCmd() {
   blank();
 
   const prompts = [
-    'how did you get into coding?',
     'what have you built?',
+    'have you won any awards?',
     'what are you looking for?',
     'what makes you different?',
   ];
