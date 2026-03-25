@@ -274,7 +274,7 @@ a:hover {
     font-size: 13px;
   }
 
-  .sc-row {
+  #main-sc-row {
     position: sticky;
     top: 0;
     background: var(--bg);
