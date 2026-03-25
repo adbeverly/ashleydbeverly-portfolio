@@ -104,7 +104,8 @@ body {
 
 #input-line {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  flex-wrap: wrap;
   margin-top: 2px;
   position: relative;
 }
@@ -117,7 +118,8 @@ body {
 
 #display-text {
   color: var(--text);
-  white-space: pre;
+  white-space: pre-wrap;
+  word-break: break-all;
 }
 
 #cursor {
