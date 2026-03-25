@@ -26,6 +26,15 @@ async function logVisit(weather) {
   } catch { /* silently fail */ }
 }
 
+async function logChat(question) {
+  try {
+    await db.collection('chat_logs').add({
+      question,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+  } catch { /* silently fail */ }
+}
+
 function timeAgo(date) {
   const s = Math.floor((new Date() - date) / 1000);
   if (s < 60)                       return 'just now';
@@ -230,11 +239,11 @@ async function whoami() {
 
 async function careerLog() {
   const entries = [
-    { year: '2015 - 2016', role: 'Mortgage Banker',                    desc: 'client-facing, sales, consumer finance' },
+    { year: '2023 - present', role: 'Senior Software Developer',        desc: 'AI automation, GCP, enterprise scale' },
+    { year: '2020 - 2023', role: 'Team Leader, Software Developer',  desc: 'coding standards, mentorship, delivery workflows' },
+    { year: '2017 - 2020', role: 'Software Developer',               desc: 'first on the team, self-taught, shipped production tools' },
     { year: '2016 - 2017', role: 'Underwriter',                         desc: 'compliance, loan analysis, regulatory requirements' },
-    { year: '2017 - 2020', role: 'Information Developer',               desc: 'first on the team, self-taught, shipped production tools' },
-    { year: '2020 - 2023', role: 'Team Leader, Information Developer',  desc: 'coding standards, mentorship, delivery workflows' },
-    { year: '2023 - present', role: 'Senior Information Developer',        desc: 'AI automation, GCP, enterprise scale' },
+    { year: '2015 - 2016', role: 'Mortgage Banker',                    desc: 'client-facing, sales, consumer finance' },
   ];
 
   blank();
@@ -401,6 +410,9 @@ async function codeCmd() {
 }
 
 let chatMode = false;
+let chatCount = 0;
+const CHAT_LIMIT = 15;
+let chatCooldown = false;
 
 async function sendToAI(question) {
   try {
@@ -417,6 +429,7 @@ async function sendToAI(question) {
 }
 
 async function askPrompt(question) {
+  logChat(question);
   ln('<span style="color:#58a6ff">&gt;</span> <span style="color:#c9d1d9">' + esc(question) + '</span>');
   blank();
   ln('<span style="color:#8b949e">// thinking...</span>');
@@ -474,6 +487,7 @@ async function resumeCmd() {
     inputLine.style.display = 'flex';
     cmdInput.focus();
   }
+  ln('<span style="color:#8b949e">// note: questions are logged anonymously for site improvement.</span>');
   blank();
 
   chatMode = true;
@@ -542,7 +556,7 @@ async function showAdminPanel() {
     ln('<span style="color:#8b949e">// current status:</span>');
     ln(`<span style="color:#e3b341">${esc(current)}</span>`);
     blank();
-    ln('<span style="color:#8b949e">// type new status and press enter, or type <span style="color:#e3b341">exit</span> to close:</span>');
+    ln('<span style="color:#8b949e">// type new status and press enter, type <span style="color:#e3b341">export logs</span> to download chat logs, or type <span style="color:#e3b341">exit</span> to close:</span>');
     blank();
   } catch {
     ln('<span style="color:#8b949e">// could not load current status</span>');
@@ -550,6 +564,36 @@ async function showAdminPanel() {
   }
   adminMode = 'update';
   if (isMobile) { inputLine.style.display = 'flex'; cmdInput.focus(); }
+}
+
+async function exportChatLogs() {
+  ln('<span style="color:#8b949e">// fetching chat logs...</span>');
+  try {
+    const snap = await db.collection('chat_logs').orderBy('timestamp', 'desc').get();
+    const grouped = {};
+    snap.forEach(doc => {
+      const data = doc.data();
+      const date = data.timestamp
+        ? data.timestamp.toDate().toISOString().slice(0, 10)
+        : 'unknown';
+      if (!grouped[date]) grouped[date] = [];
+      grouped[date].push(data.question);
+    });
+    const blob = new Blob([JSON.stringify(grouped, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `chat_logs_${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    output.lastElementChild.remove();
+    ln('<span style="color:#56d364">// chat logs exported.</span>');
+  } catch {
+    output.lastElementChild.remove();
+    ln('<span style="color:#f778ba">// export failed. try again.</span>');
+  }
+  blank();
+  adminMode = 'update';
 }
 
 async function updateStatus(text) {
@@ -624,12 +668,28 @@ async function runCommand(raw) {
   }
 
   if (chatMode) {
+    if (chatCount >= CHAT_LIMIT) {
+      blank();
+      ln('<span style="color:#8b949e">// you\'ve had quite the interview session — come back later.</span>');
+      blank();
+      return;
+    }
+    if (chatCooldown) {
+      blank();
+      ln('<span style="color:#8b949e">// one question at a time — still thinking...</span>');
+      blank();
+      return;
+    }
+    chatCooldown = true;
+    chatCount++;
+    logChat(trimmed);
     blank();
     ln('<span style="color:#8b949e">// thinking...</span>');
     const reply = await sendToAI(trimmed);
     output.lastElementChild.remove();
     await typewriterLn(reply, '#c9d1d9', 18);
     blank();
+    chatCooldown = false;
     return;
   }
 
@@ -667,6 +727,10 @@ cmdInput.addEventListener('keydown', async (e) => {
         blank();
         ln('<span style="color:#8b949e">// admin panel closed.</span>');
         blank();
+      } else if (val.trim().toLowerCase() === 'export logs') {
+        ln('<span style="color:#58a6ff">&gt;</span> <span style="color:#c9d1d9">export logs</span>');
+        blank();
+        await exportChatLogs();
       } else if (val.trim()) {
         await updateStatus(val.trim());
       }
