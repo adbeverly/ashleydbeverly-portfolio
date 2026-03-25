@@ -310,6 +310,7 @@ async function helpCmd() {
 
 async function clearCmd() {
   chatMode = false;
+  if (isMobile) inputLine.style.display = 'none';
   output.innerHTML = '';
   await bootSequence();
   setActiveBtn('./ashley');
@@ -350,34 +351,64 @@ async function sendToAI(question) {
   }
 }
 
+async function askPrompt(question) {
+  ln('<span style="color:#58a6ff">&gt;</span> <span style="color:#c9d1d9">' + esc(question) + '</span>');
+  blank();
+  ln('<span style="color:#8b949e">// thinking...</span>');
+  const reply = await sendToAI(question);
+  output.lastElementChild.remove();
+  await typewriterLn(reply, '#c9d1d9', 18);
+  blank();
+}
+
 async function resumeCmd() {
   blank();
 
-  const row = document.createElement('span');
-  row.className = 'ln';
+  const dlRow = document.createElement('span');
+  dlRow.className = 'ln';
   const dlBtn = document.createElement('a');
   dlBtn.className = 'sc';
   dlBtn.href = 'assets/ashley-beverly-resume.pdf';
   dlBtn.download = 'ashley-beverly-resume.pdf';
   dlBtn.textContent = 'resume.pdf';
-  row.appendChild(dlBtn);
-  output.appendChild(row);
+  dlRow.appendChild(dlBtn);
+  output.appendChild(dlRow);
   blank();
 
   ln('<span style="color:#8b949e">ask me anything — I\'ll answer as myself.</span>');
   blank();
   ln('<span style="color:#8b949e">try:</span>');
+  blank();
+
   const prompts = [
     'how did you get into coding?',
-    'what awards have you won?',
+    'what have you built?',
     'what are you looking for?',
     'what makes you different?',
   ];
+
+  const pRow = document.createElement('div');
+  pRow.className = 'sc-row';
   for (const p of prompts) {
-    ln(`<span style="color:#8b949e">  &gt; ${p}</span>`);
+    const btn = document.createElement('button');
+    btn.className = 'sc';
+    btn.textContent = `> ${p}`;
+    btn.addEventListener('click', async () => {
+      setShortcutsEnabled(true);
+      await askPrompt(p);
+    });
+    pRow.appendChild(btn);
   }
+  output.appendChild(pRow);
   blank();
-  ln('<span style="color:#8b949e">type <span style="color:#e3b341">exit</span> to leave.</span>');
+
+  if (!isMobile) {
+    ln('<span style="color:#8b949e">or type your own question. type <span style="color:#e3b341">exit</span> to leave.</span>');
+  } else {
+    ln('<span style="color:#8b949e">or type your own question below.</span>');
+    inputLine.style.display = 'flex';
+    cmdInput.focus();
+  }
   blank();
 
   chatMode = true;
@@ -426,6 +457,7 @@ async function runCommand(raw) {
 
   if (key === 'exit' && chatMode) {
     chatMode = false;
+    if (isMobile) inputLine.style.display = 'none';
     blank();
     ln('<span style="color:#8b949e">// back to normal mode</span>');
     blank();
@@ -523,6 +555,8 @@ async function typeAndRun(command) {
 }
 
 async function shortcutClick(cmd) {
+  chatMode = false;
+  if (isMobile) inputLine.style.display = 'none';
   setShortcutsEnabled(false);
   output.innerHTML = '';
   renderShortcutButtons();
