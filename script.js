@@ -266,10 +266,11 @@ async function impact() {
   await sleep(500);
 
   const rows = [
-    { num: '6,800 hrs/month', desc: 'saved via AI-driven automation' },
+    { num: '600,000+',        desc: 'monthly interactions on shipped tools' },
+    { num: '7,000+',          desc: 'monthly users across 142 applications' },
+    { num: '6,800+',          desc: 'hours saved per month via AI automation' },
     { num: '90%',             desc: 'system success rate in production' },
     { num: '69%',             desc: 'of app migrations led (18 of 26)' },
-    { num: '50K+',            desc: 'monthly interactions on shipped tools' },
     { num: '41',              desc: 'generative playbooks built and maintained' },
   ];
 
@@ -331,9 +332,9 @@ async function catAbout() {
 async function catFunFacts() {
   blank();
   const facts = [
-    'I first taught myself to code around 2008 to build a fansite for a now famous rapper who was',
-    'not famous yet. She later hired me as her official web admin. I was doing this years',
-    'before I ever considered a career in tech.',
+    'I first taught myself to code around 2008 to build a WordPress website for a now',
+    'famous musician who was not famous yet. She later hired me as her official web admin.',
+    'I was doing this years before I ever considered a career in tech.',
     '',
     'My favorite movie and book is The Neverending Story. I wear a custom Auryn necklace',
     'every single day. No notes.',
@@ -362,7 +363,7 @@ async function helpCmd() {
   blank();
 
   const cmds = [
-    { cmd: './ashley',             desc: 'name, title, location, contact' },
+    { cmd: './ashley',            desc: 'name, title, location, contact' },
     { cmd: 'code .',              desc: 'open github' },
     { cmd: 'cat career.log',      desc: 'career timeline' },
     { cmd: './impact --numbers',  desc: 'impact metrics' },
